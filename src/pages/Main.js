@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import io from 'socket.io-client';
 
 import './Main.css';
 
@@ -8,10 +9,12 @@ import api from '../services/api';
 import logo from '../assets/logo.svg';
 import like from '../assets/like.svg';
 import dislike from '../assets/dislike.svg';
+import itsamatch from '../assets/itsamatch.png'
 
 export default function Main({ match }){
     // Estado do componente
     const [users, setUsers] = useState([]);
+    const [matchDev, setMatchDev] = useState(null);
 
     // Faz a chamada pra api assim que o componente é carregado na tela
     useEffect(()=> {
@@ -36,6 +39,19 @@ export default function Main({ match }){
 
         setUsers(users.filter(user => user._id !== idTarget));
     }
+
+    // Trata a chamado ao websocket para verificar ocorrência de match
+    useEffect(()=>{
+        // envia o id do usuário para o servidor para associá-lo ao socket
+        const socket = io('http://localhost:3333', {
+            query: { user: match.params.id }
+        });
+
+        // Fico ouvindo o servidor aguardando informação de ocorrencia de match
+        socket.on('match', dev => {
+            setMatchDev(dev);
+        });
+    }, [match.params.id]);
 
     // Trata o dislike dado a um usuario, envia a informação pra api
     async function handleDislike(idTarget) {
@@ -77,6 +93,18 @@ export default function Main({ match }){
                     <div className="empty">Acabou :(</div>
                 )
             }
+
+            {/* Mostro a ocorrencia de match */}
+            { matchDev && (
+                <div className="match-container">
+                    <img src={itsamatch} alt="It's a match!!!"/>
+                    <img className="avatar" src={ matchDev.avatar } alt=""/>
+                    <strong>{ matchDev.name }</strong>
+                    <p>{matchDev.bio}</p>
+
+                    <button type="button" onClick={()=>setMatchDev(null)}>FECHAR</button>
+                </div>
+            ) }
         </div>
     );
 }
